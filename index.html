@@ -58,6 +58,7 @@
       font-weight: 600; border-radius: 0.5rem; cursor: pointer; transition: all 0.2s; width: 100%;
     }
     .btn:hover { background: var(--primary-accent); }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
     .btn-secondary { background: transparent; border: 1px solid var(--border); color: var(--text); width: auto; padding: 0.4rem 0.75rem; font-size: 0.8rem; }
 
     #qrcode-wrapper {
@@ -181,7 +182,15 @@
       statusBadge.className = "badge waiting";
       statusText.innerText = "Server Connecting";
 
-      peer = new Peer();
+      // Added Google STUN configuration for cross-network connectivity
+      peer = new Peer({
+        config: {
+          iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' }
+          ]
+        }
+      });
 
       peer.on('open', (id) => {
         sessionBtn.disabled = false;
