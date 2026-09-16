@@ -1,442 +1,674 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Mobile WebRTC Scanner</title>
-  
-  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-  <script src="https://unpkg.com/html5-qrcode"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mobile WebRTC Scanner</title>
 
-  <style>
-    :root {
-      --primary: #6366f1;
-      --primary-hover: #4f46e5;
-      --bg: #090d16;
-      --surface: #131c2e;
-      --surface-card: #1e293b;
-      --surface-border: #334155;
-      --text: #f8fafc;
-      --text-muted: #94a3b8;
-      --success: #10b981;
-      --warning: #f59e0b;
-      --danger: #ef4444;
-    }
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
 
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
-    body { background-color: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --bg: #090d16;
+            --surface: #131c2e;
+            --surface-card: #1e293b;
+            --surface-border: #334155;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
 
-    header {
-      background: rgba(19, 28, 46, 0.85);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border-bottom: 1px solid var(--surface-border);
-      padding: 0.9rem 1.25rem;
-      position: sticky; top: 0; z-index: 20;
-      display: flex; align-items: center; justify-content: space-between;
-    }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
 
-    .brand-title { font-size: 1rem; font-weight: 700; letter-spacing: -0.02em; display: flex; align-items: center; gap: 0.5rem; }
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
 
-    .status-pill {
-      display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.35rem 0.8rem; border-radius: 9999px;
-      font-size: 0.75rem; font-weight: 600; background: rgba(239, 68, 68, 0.12); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.3);
-      transition: all 0.3s ease;
-    }
-    .status-pill.connected { background: rgba(16, 185, 129, 0.12); color: var(--success); border-color: rgba(16, 185, 129, 0.3); }
-    .status-dot { width: 7px; height: 7px; border-radius: 50%; background-color: currentColor; }
-    .status-pill.connected .status-dot { box-shadow: 0 0 8px var(--success); }
+        header {
+            background: rgba(19, 28, 46, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--surface-border);
+            padding: 0.9rem 1.25rem;
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
 
-    main { flex: 1; padding: 1.25rem; display: flex; flex-direction: column; gap: 1.25rem; max-width: 480px; margin: 0 auto; width: 100%; }
+        .brand-title {
+            font-size: 1rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
 
-    .card {
-      background: var(--surface);
-      border: 1px solid var(--surface-border);
-      border-radius: 1.25rem;
-      padding: 1.25rem;
-      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
-    }
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            padding: 0.35rem 0.8rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            background: rgba(239, 68, 68, 0.12);
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            transition: all 0.3s ease;
+        }
 
-    .pairing-header { margin-bottom: 1rem; }
-    .pairing-title { font-size: 0.95rem; font-weight: 600; color: var(--text); }
-    .pairing-sub { font-size: 0.78rem; color: var(--text-muted); margin-top: 0.25rem; }
+        .status-pill.connected {
+            background: rgba(16, 185, 129, 0.12);
+            color: var(--success);
+            border-color: rgba(16, 185, 129, 0.3);
+        }
 
-    .manual-pair-box { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
-    .manual-input {
-      flex: 1; background: var(--bg); border: 1px solid var(--surface-border); border-radius: 0.65rem;
-      padding: 0.65rem 0.85rem; color: white; font-family: monospace; font-size: 0.9rem;
-      outline: none; transition: border-color 0.2s;
-    }
-    .manual-input:focus { border-color: var(--primary); }
+        .status-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background-color: currentColor;
+        }
 
-    .btn {
-      background: var(--primary); color: white; border: none; padding: 0.65rem 1.1rem;
-      border-radius: 0.65rem; font-weight: 600; font-size: 0.85rem; cursor: pointer;
-      display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;
-      transition: all 0.2s ease;
-    }
-    .btn:active { transform: scale(0.98); }
-    .btn:hover { background: var(--primary-hover); }
-    .btn-secondary { background: var(--surface-card); border: 1px solid var(--surface-border); color: var(--text); }
-    .btn-warning { background: rgba(245, 158, 11, 0.2); border: 1px solid var(--warning); color: #fde68a; }
-    .btn-danger { background: rgba(239, 68, 68, 0.2); border: 1px solid var(--danger); color: #fca5a5; }
+        .status-pill.connected .status-dot {
+            box-shadow: 0 0 8px var(--success);
+        }
 
-    .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.85rem; }
+        main {
+            flex: 1;
+            padding: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+            max-width: 480px;
+            margin: 0 auto;
+            width: 100%;
+        }
 
-    .scanner-container {
-      position: relative;
-      width: 100%; border-radius: 1rem; overflow: hidden;
-      background: #000; border: 1px solid var(--surface-border);
-      min-height: 250px; display: flex; align-items: center; justify-content: center;
-    }
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--surface-border);
+            border-radius: 1.25rem;
+            padding: 1.25rem;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+        }
 
-    #reader { width: 100%; border: none !important; }
-    #reader video { width: 100% !important; object-fit: cover !important; border-radius: 0.85rem; }
-    #reader__dashboard { display: none !important; }
+        .pairing-header {
+            margin-bottom: 1rem;
+        }
 
-    .mode-tag {
-      position: absolute; top: 12px; left: 12px; z-index: 12;
-      background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(8px);
-      border: 1px solid var(--surface-border); padding: 0.35rem 0.65rem;
-      border-radius: 0.5rem; font-size: 0.72rem; font-weight: 600; color: #a5b4fc;
-      display: flex; align-items: center; gap: 0.4rem;
-    }
+        .pairing-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text);
+        }
 
-    .permission-overlay {
-      position: absolute; inset: 0; background: var(--surface-card);
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      padding: 1.5rem; text-align: center; z-index: 15; gap: 0.85rem;
-    }
-    .permission-icon {
-      width: 48px; height: 48px; border-radius: 50%; background: rgba(99, 102, 241, 0.15);
-      color: var(--primary); display: flex; align-items: center; justify-content: center;
-    }
+        .pairing-sub {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+        }
 
-    .scan-history-title { font-size: 0.85rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; }
-    .scan-list { display: flex; flex-direction: column; gap: 0.5rem; max-height: 200px; overflow-y: auto; }
-    .scan-item {
-      background: var(--bg); border: 1px solid var(--surface-border); padding: 0.75rem 0.85rem;
-      border-radius: 0.65rem; font-family: monospace; font-size: 0.85rem;
-      display: flex; justify-content: space-between; align-items: center;
-      animation: fadeIn 0.25s ease-out;
-    }
+        .manual-pair-box {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
 
-    .log-window {
-      position: fixed; bottom: 1rem; left: 50%; transform: translateX(-50%);
-      width: calc(100% - 2.5rem); max-width: 440px;
-      background: rgba(15, 23, 42, 0.95); border: 1px solid var(--surface-border);
-      backdrop-filter: blur(8px); border-radius: 0.75rem; padding: 0.6rem 0.85rem;
-      box-shadow: 0 10px 20px rgba(0,0,0,0.4); z-index: 100;
-      display: flex; flex-direction: column; gap: 0.3rem; pointer-events: none;
-      transition: opacity 0.3s ease;
-    }
-    .log-header { font-size: 0.68rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
-    .log-msg { font-family: monospace; font-size: 0.78rem; color: #e2e8f0; word-break: break-all; }
+        .manual-input {
+            flex: 1;
+            background: var(--bg);
+            border: 1px solid var(--surface-border);
+            border-radius: 0.65rem;
+            padding: 0.65rem 0.85rem;
+            color: white;
+            font-family: monospace;
+            font-size: 0.9rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
 
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(-4px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-  </style>
+        .manual-input:focus {
+            border-color: var(--primary);
+        }
+
+        .btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.65rem 1.1rem;
+            border-radius: 0.65rem;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            transition: all 0.2s ease;
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn:hover {
+            background: var(--primary-hover);
+        }
+
+        .btn-secondary {
+            background: var(--surface-card);
+            border: 1px solid var(--surface-border);
+            color: var(--text);
+        }
+
+        .btn-warning {
+            background: rgba(245, 158, 11, 0.2);
+            border: 1px solid var(--warning);
+            color: #fde68a;
+        }
+
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid var(--danger);
+            color: #fca5a5;
+        }
+
+        .action-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+            margin-top: 0.85rem;
+        }
+
+        .scanner-container {
+            position: relative;
+            width: 100%;
+            border-radius: 1rem;
+            overflow: hidden;
+            background: #000;
+            border: 1px solid var(--surface-border);
+            min-height: 250px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #reader {
+            width: 100%;
+            border: none !important;
+        }
+
+        #reader video {
+            width: 100% !important;
+            object-fit: cover !important;
+            border-radius: 0.85rem;
+        }
+
+        #reader__dashboard {
+            display: none !important;
+        }
+
+        .mode-tag {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            z-index: 12;
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(8px);
+            border: 1px solid var(--surface-border);
+            padding: 0.35rem 0.65rem;
+            border-radius: 0.5rem;
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: #a5b4fc;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .permission-overlay {
+            position: absolute;
+            inset: 0;
+            background: var(--surface-card);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+            text-align: center;
+            z-index: 15;
+            gap: 0.85rem;
+        }
+
+        .permission-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: rgba(99, 102, 241, 0.15);
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .scan-history-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .scan-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .scan-item {
+            background: var(--bg);
+            border: 1px solid var(--surface-border);
+            padding: 0.75rem 0.85rem;
+            border-radius: 0.65rem;
+            font-family: monospace;
+            font-size: 0.85rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            animation: fadeIn 0.25s ease-out;
+        }
+
+        .log-window {
+            position: fixed;
+            bottom: 1rem;
+            left: 50%;
+            transform: translateX(-50%);
+            width: calc(100% - 2.5rem);
+            max-width: 440px;
+            background: rgba(15, 23, 42, 0.95);
+            border: 1px solid var(--surface-border);
+            backdrop-filter: blur(8px);
+            border-radius: 0.75rem;
+            padding: 0.6rem 0.85rem;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .log-header {
+            font-size: 0.68rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .log-msg {
+            font-family: monospace;
+            font-size: 0.78rem;
+            color: #e2e8f0;
+            word-break: break-all;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-4px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
 </head>
+
 <body>
 
-  <header>
-    <div class="brand-title">
-      <span>📱</span> Mobile Scanner
-    </div>
-    <div id="status-pill" class="status-pill">
-      <div class="status-dot"></div>
-      <span id="status-text">Unpaired</span>
-    </div>
-  </header>
-
-  <main>
-    <!-- STEP 1: PAIRING & CAMERA CONTAINER -->
-    <section class="card">
-      <div id="step-title-container" class="pairing-header">
-        <h2 id="step-title" class="pairing-title">Pairing Session</h2>
-        <p id="step-sub" class="pairing-sub">Scan desktop QR code or enter code manually to pair</p>
-      </div>
-
-      <div id="manual-box" class="manual-pair-box">
-        <input id="code-input" type="text" class="manual-input" placeholder="Enter Peer Code">
-        <button class="btn" onclick="connectByCode()">Pair</button>
-      </div>
-
-      <!-- CAMERA SCANNER CONTAINER -->
-      <div class="scanner-container">
-        <!-- Live Camera Mode Indicator -->
-        <div id="mode-badge" class="mode-tag">
-          📷 <span>Pairing Mode: Scan PC QR Code</span>
+    <header>
+        <div class="brand-title">
+            <span>📱</span> Mobile Scanner
         </div>
-
-        <!-- Camera Permission Overlay -->
-        <div id="cam-permission-overlay" class="permission-overlay">
-          <div class="permission-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-          </div>
-          <div style="font-weight: 600; font-size: 0.95rem;">Camera Access Required</div>
-          <div style="font-size: 0.78rem; color: var(--text-muted);">Enable camera to scan desktop pairing code or inventory items.</div>
-          <div style="display: flex; gap: 0.5rem;">
-            <button id="enable-btn" class="btn" onclick="requestCameraAccess()">Enable Camera</button>
-            <button class="btn btn-warning" onclick="refreshCamera()">🔄 Refresh</button>
-          </div>
+        <div id="status-pill" class="status-pill">
+            <div class="status-dot"></div>
+            <span id="status-text">Unpaired</span>
         </div>
+    </header>
 
-        <div id="reader"></div>
-      </div>
+    <main>
+        <!-- STEP 1: PAIRING & CAMERA CONTAINER -->
+        <section class="card">
+            <div id="step-title-container" class="pairing-header">
+                <h2 id="step-title" class="pairing-title">Pairing Session</h2>
+                <p id="step-sub" class="pairing-sub">Scan desktop QR code or enter code manually to pair</p>
+            </div>
 
-      <!-- CONTROLS & REFRESH/RECAPTURE OPTIONS -->
-      <div class="action-grid">
-        <button id="manual-scan-btn" class="btn btn-secondary" onclick="triggerManualDetection()">
-          📷 Snap / Detect
-        </button>
-        <button id="refresh-cam-btn" class="btn btn-warning" onclick="refreshCamera()">
-          🔄 Refresh Camera
-        </button>
-      </div>
-    </section>
+            <div id="manual-box" class="manual-pair-box">
+                <input id="code-input" type="text" class="manual-input" placeholder="Enter Peer Code">
+                <button class="btn" onclick="connectByCode()">Pair</button>
+            </div>
 
-    <!-- TRANSMISSION HISTORY LOG -->
-    <section class="card">
-      <div class="scan-history-title">Transmission History</div>
-      <div id="scan-history" class="scan-list">
-        <div style="text-align: center; color: var(--text-muted); font-size: 0.8rem; padding: 1.5rem 0;">No scans sent yet</div>
-      </div>
-    </section>
-  </main>
+            <!-- CAMERA SCANNER CONTAINER -->
+            <div class="scanner-container">
+                <!-- Live Camera Mode Indicator -->
+                <div id="mode-badge" class="mode-tag">
+                    📷 <span>Pairing Mode: Scan PC QR Code</span>
+                </div>
 
-  <!-- TEMPORARY SYSTEM EVENT LOG -->
-  <div id="log-window" class="log-window" style="opacity: 0;">
-    <div class="log-header">System Event Log</div>
-    <div id="log-msg" class="log-msg">Initializing P2P network...</div>
-  </div>
+                <!-- Camera Permission Overlay -->
+                <div id="cam-permission-overlay" class="permission-overlay">
+                    <div class="permission-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path
+                                d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                            <circle cx="12" cy="13" r="4" />
+                        </svg>
+                    </div>
+                    <div style="font-weight: 600; font-size: 0.95rem;">Camera Access Required</div>
+                    <div style="font-size: 0.78rem; color: var(--text-muted);">Enable camera to scan desktop pairing
+                        code or inventory items.</div>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button id="enable-btn" class="btn" onclick="requestCameraAccess()">Enable Camera</button>
+                        <button class="btn btn-warning" onclick="refreshCamera()">🔄 Refresh</button>
+                    </div>
+                </div>
 
-  <script>
-    let peer = new Peer({
-      config: {
-        iceServers: [
-          { urls: 'stun:stun.l.google.com:19302' },
-          { urls: 'stun:stun1.l.google.com:19302' }
-        ]
-      }
-    });
-    
-    let conn = null;
-    let isPaired = false;
-    let html5QrCode = null;
-    let logTimeout = null;
+                <div id="reader"></div>
+            </div>
 
-    const statusPill = document.getElementById("status-pill");
-    const statusText = document.getElementById("status-text");
-    const stepTitleContainer = document.getElementById("step-title-container");
-    const scanHistory = document.getElementById("scan-history");
-    const permOverlay = document.getElementById("cam-permission-overlay");
-    const modeBadge = document.getElementById("mode-badge");
+            <!-- CONTROLS & REFRESH/RECAPTURE OPTIONS -->
+            <div class="action-grid">
+                <button id="manual-scan-btn" class="btn btn-secondary" onclick="triggerManualDetection()">
+                    📷 Snap / Detect
+                </button>
+                <button id="refresh-cam-btn" class="btn btn-warning" onclick="refreshCamera()">
+                    🔄 Refresh Camera
+                </button>
+            </div>
+        </section>
 
-    function showLog(message) {
-      const windowEl = document.getElementById("log-window");
-      const msgEl = document.getElementById("log-msg");
-      
-      msgEl.innerText = message;
-      windowEl.style.opacity = "1";
+        <!-- TRANSMISSION HISTORY LOG -->
+        <section class="card">
+            <div class="scan-history-title">Transmission History</div>
+            <div id="scan-history" class="scan-list">
+                <div style="text-align: center; color: var(--text-muted); font-size: 0.8rem; padding: 1.5rem 0;">No
+                    scans sent yet</div>
+            </div>
+        </section>
+    </main>
 
-      if (logTimeout) clearTimeout(logTimeout);
-      logTimeout = setTimeout(() => {
-        windowEl.style.opacity = "0";
-      }, 4000);
-    }
+    <!-- TEMPORARY SYSTEM EVENT LOG -->
+    <div id="log-window" class="log-window" style="opacity: 0;">
+        <div class="log-header">System Event Log</div>
+        <div id="log-msg" class="log-msg">Initializing P2P network...</div>
+    </div>
 
-    showLog("WebRTC peer client initialized.");
+    <script>
+        // Replace the peer initialization at the top of script tag:
+        let peer = new Peer({
+            config: {
+                iceServers: [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' },
+                    {
+                        urls: 'turn:openrelay.metered.ca:80',
+                        username: 'openrelay',
+                        credential: 'openrelay'
+                    },
+                    {
+                        urls: 'turn:openrelay.metered.ca:443',
+                        username: 'openrelay',
+                        credential: 'openrelay'
+                    }
+                ]
+            }
+        });
 
-    async function stopCamera() {
-      if (html5QrCode && html5QrCode.isScanning) {
-        try {
-          await html5QrCode.stop();
-          html5QrCode.clear();
-        } catch (e) {
-          console.warn("Camera stop warning:", e);
+        let conn = null;
+        let isPaired = false;
+        let html5QrCode = null;
+        let logTimeout = null;
+
+        const statusPill = document.getElementById("status-pill");
+        const statusText = document.getElementById("status-text");
+        const stepTitleContainer = document.getElementById("step-title-container");
+        const scanHistory = document.getElementById("scan-history");
+        const permOverlay = document.getElementById("cam-permission-overlay");
+        const modeBadge = document.getElementById("mode-badge");
+
+        function showLog(message) {
+            const windowEl = document.getElementById("log-window");
+            const msgEl = document.getElementById("log-msg");
+
+            msgEl.innerText = message;
+            windowEl.style.opacity = "1";
+
+            if (logTimeout) clearTimeout(logTimeout);
+            logTimeout = setTimeout(() => {
+                windowEl.style.opacity = "0";
+            }, 4000);
         }
-      }
-    }
 
-    async function refreshCamera() {
-      showLog("Restarting camera stream...");
-      await stopCamera();
-      permOverlay.style.display = "flex";
-      const btn = document.getElementById("enable-btn");
-      btn.innerText = "Enable Camera";
-      btn.disabled = false;
-      requestCameraAccess();
-    }
+        showLog("WebRTC peer client initialized.");
 
-    function requestCameraAccess() {
-      const btn = document.getElementById("enable-btn");
-      btn.innerText = "Starting Camera...";
-      btn.disabled = true;
+        async function stopCamera() {
+            if (html5QrCode && html5QrCode.isScanning) {
+                try {
+                    await html5QrCode.stop();
+                    html5QrCode.clear();
+                } catch (e) {
+                    console.warn("Camera stop warning:", e);
+                }
+            }
+        }
 
-      showLog("Requesting video stream hardware access...");
-
-      html5QrCode = new Html5Qrcode("reader");
-      const config = { fps: 10, qrbox: { width: 220, height: 220 } };
-
-      html5QrCode.start(
-        { facingMode: "environment" },
-        config,
-        onScanSuccess,
-        onScanError
-      ).then(() => {
-        permOverlay.style.display = "none";
-        showLog("Camera activated. Point at desktop QR code.");
-      }).catch(() => {
-        html5QrCode.start({}, config, onScanSuccess, onScanError)
-          .then(() => {
-            permOverlay.style.display = "none";
-            showLog("Camera activated (Fallback mode).");
-          }).catch(err => {
-            alert("Camera Error: Check browser permissions or tap 'Refresh Camera'.");
+        async function refreshCamera() {
+            showLog("Restarting camera stream...");
+            await stopCamera();
+            permOverlay.style.display = "flex";
+            const btn = document.getElementById("enable-btn");
             btn.innerText = "Enable Camera";
             btn.disabled = false;
-            showLog("Camera Access Denied: " + err);
-          });
-      });
-    }
-
-    function onScanError(err) {
-      // Loop scan error catch
-    }
-
-    function connectByCode() {
-      const code = document.getElementById("code-input").value.trim();
-      if (code) initiatePairing(code);
-    }
-
-    function onScanSuccess(decodedText) {
-      if (!isPaired) {
-        showLog(`Scanned Pairing Code: ${decodedText}`);
-        initiatePairing(decodedText);
-      } else {
-        if (conn && conn.open) {
-          conn.send(decodedText);
-          if (navigator.vibrate) navigator.vibrate(80);
-          addScanHistoryItem(decodedText);
-          showLog(`Transmitted: ${decodedText}`);
+            requestCameraAccess();
         }
-      }
-    }
 
-    function triggerManualDetection() {
-      const videoElement = document.querySelector("#reader video");
-      if (!videoElement) {
-        alert("Please tap 'Enable Camera' first.");
-        return;
-      }
+        function requestCameraAccess() {
+            const btn = document.getElementById("enable-btn");
+            btn.innerText = "Starting Camera...";
+            btn.disabled = true;
 
-      showLog("Capturing snapshot frame...");
+            showLog("Requesting video stream hardware access...");
 
-      const canvas = document.createElement("canvas");
-      canvas.width = videoElement.videoWidth;
-      canvas.height = videoElement.videoHeight;
-      const ctx = canvas.getContext("2d");
-      ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+            html5QrCode = new Html5Qrcode("reader");
+            const config = { fps: 10, qrbox: { width: 220, height: 220 } };
 
-      const scannerEngine = new Html5Qrcode("reader");
-      
-      canvas.toBlob((blob) => {
-        const file = new File([blob], "snapshot.png", { type: "image/png" });
-        scannerEngine.scanFile(file, true)
-          .then(decodedText => {
-            videoElement.style.filter = "brightness(1.2) contrast(1.1)";
-            setTimeout(() => { videoElement.style.filter = "none"; }, 800);
-            onScanSuccess(decodedText);
-          })
-          .catch(() => {
-            showLog("No QR code detected in frame.");
-            alert("No clear QR code found in frame. Recapture or realign.");
-          });
-      });
-    }
+            html5QrCode.start(
+                { facingMode: "environment" },
+                config,
+                onScanSuccess,
+                onScanError
+            ).then(() => {
+                permOverlay.style.display = "none";
+                showLog("Camera activated. Point at desktop QR code.");
+            }).catch(() => {
+                html5QrCode.start({}, config, onScanSuccess, onScanError)
+                    .then(() => {
+                        permOverlay.style.display = "none";
+                        showLog("Camera activated (Fallback mode).");
+                    }).catch(err => {
+                        alert("Camera Error: Check browser permissions or tap 'Refresh Camera'.");
+                        btn.innerText = "Enable Camera";
+                        btn.disabled = false;
+                        showLog("Camera Access Denied: " + err);
+                    });
+            });
+        }
 
-    function initiatePairing(targetPeerId) {
-      statusText.innerText = "Pairing...";
-      showLog(`Connecting to peer: ${targetPeerId}`);
-      conn = peer.connect(targetPeerId);
+        function onScanError(err) {
+            // Loop scan error catch
+        }
 
-      conn.on('open', () => {
-        isPaired = true;
-        statusPill.classList.add("connected");
-        statusText.innerText = "Connected";
+        function connectByCode() {
+            const code = document.getElementById("code-input").value.trim();
+            if (code) initiatePairing(code);
+        }
 
-        conn.send({ type: 'DEVICE_INFO', name: getMobileDeviceInfo() });
+        function onScanSuccess(decodedText) {
+            if (!isPaired) {
+                showLog(`Scanned Pairing Code: ${decodedText}`);
+                initiatePairing(decodedText);
+            } else {
+                if (conn && conn.open) {
+                    conn.send(decodedText);
+                    if (navigator.vibrate) navigator.vibrate(80);
+                    addScanHistoryItem(decodedText);
+                    showLog(`Transmitted: ${decodedText}`);
+                }
+            }
+        }
 
-        document.getElementById("manual-box").style.display = "none";
-        modeBadge.innerHTML = `📦 <span>Inventory Scanning Active</span>`;
-        modeBadge.style.color = "var(--success)";
+        function triggerManualDetection() {
+            const videoElement = document.querySelector("#reader video");
+            if (!videoElement) {
+                alert("Please tap 'Enable Camera' first.");
+                return;
+            }
 
-        stepTitleContainer.innerHTML = `
+            showLog("Capturing snapshot frame...");
+
+            const canvas = document.createElement("canvas");
+            canvas.width = videoElement.videoWidth;
+            canvas.height = videoElement.videoHeight;
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+
+            const scannerEngine = new Html5Qrcode("reader");
+
+            canvas.toBlob((blob) => {
+                const file = new File([blob], "snapshot.png", { type: "image/png" });
+                scannerEngine.scanFile(file, true)
+                    .then(decodedText => {
+                        videoElement.style.filter = "brightness(1.2) contrast(1.1)";
+                        setTimeout(() => { videoElement.style.filter = "none"; }, 800);
+                        onScanSuccess(decodedText);
+                    })
+                    .catch(() => {
+                        showLog("No QR code detected in frame.");
+                        alert("No clear QR code found in frame. Recapture or realign.");
+                    });
+            });
+        }
+
+        function initiatePairing(targetPeerId) {
+            statusText.innerText = "Pairing...";
+            showLog(`Connecting to peer: ${targetPeerId}`);
+            conn = peer.connect(targetPeerId);
+
+            conn.on('open', () => {
+                isPaired = true;
+                statusPill.classList.add("connected");
+                statusText.innerText = "Connected";
+
+                conn.send({ type: 'DEVICE_INFO', name: getMobileDeviceInfo() });
+
+                document.getElementById("manual-box").style.display = "none";
+                modeBadge.innerHTML = `📦 <span>Inventory Scanning Active</span>`;
+                modeBadge.style.color = "var(--success)";
+
+                stepTitleContainer.innerHTML = `
           <h2 class="pairing-title">📦 Scan Inventory QR</h2>
           <p class="pairing-sub">Camera active: Scans will transmit live to PC</p>
         `;
 
-        showLog("Connection established! Inventory scanning active.");
-        if (navigator.vibrate) navigator.vibrate(200);
-      });
+                showLog("Connection established! Inventory scanning active.");
+                if (navigator.vibrate) navigator.vibrate(200);
+            });
 
-      conn.on('data', (data) => {
-        if (typeof data === 'object' && data.type === 'DEVICE_INFO') {
-          stepTitleContainer.innerHTML = `
+            conn.on('data', (data) => {
+                if (typeof data === 'object' && data.type === 'DEVICE_INFO') {
+                    stepTitleContainer.innerHTML = `
             <div style="font-size: 0.8rem; color: var(--success); font-weight: 600; margin-bottom: 0.2rem;">✅ CONNECTED TO PC</div>
             <div style="font-size: 0.95rem; font-weight: 600;">💻 ${escapeHtml(data.name)}</div>
           `;
-        }
-      });
+                }
+            });
 
-      conn.on('close', () => {
-        isPaired = false;
-        statusPill.classList.remove("connected");
-        statusText.innerText = "Disconnected";
-        modeBadge.innerHTML = `📷 <span>Pairing Mode: Scan PC QR Code</span>`;
-        modeBadge.style.color = "#a5b4fc";
-        
-        stepTitleContainer.innerHTML = `
+            conn.on('close', () => {
+                isPaired = false;
+                statusPill.classList.remove("connected");
+                statusText.innerText = "Disconnected";
+                modeBadge.innerHTML = `📷 <span>Pairing Mode: Scan PC QR Code</span>`;
+                modeBadge.style.color = "#a5b4fc";
+
+                stepTitleContainer.innerHTML = `
           <h2 id="step-title" class="pairing-title">Pairing Session</h2>
           <p class="pairing-sub">Scan desktop QR code or enter code manually to pair</p>
         `;
-        document.getElementById("manual-box").style.display = "flex";
-        showLog("P2P session closed by peer.");
-      });
-    }
+                document.getElementById("manual-box").style.display = "flex";
+                showLog("P2P session closed by peer.");
+            });
+        }
 
-    function getMobileDeviceInfo() {
-      const ua = navigator.userAgent;
-      let device = "Mobile Device";
-      if (ua.includes("iPhone")) device = "iPhone";
-      else if (ua.includes("iPad")) device = "iPad";
-      else if (ua.includes("Android")) {
-        const match = ua.match(/Android\s+[\d\.]+;\s*([^;)]+)/);
-        device = match ? match[1] : "Android Device";
-      }
-      return device;
-    }
+        function getMobileDeviceInfo() {
+            const ua = navigator.userAgent;
+            let device = "Mobile Device";
+            if (ua.includes("iPhone")) device = "iPhone";
+            else if (ua.includes("iPad")) device = "iPad";
+            else if (ua.includes("Android")) {
+                const match = ua.match(/Android\s+[\d\.]+;\s*([^;)]+)/);
+                device = match ? match[1] : "Android Device";
+            }
+            return device;
+        }
 
-    function addScanHistoryItem(text) {
-      if (scanHistory.children[0]?.innerText.includes("No scans sent")) {
-        scanHistory.innerHTML = "";
-      }
-      const item = document.createElement("div");
-      item.className = "scan-item";
-      const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-      item.innerHTML = `
+        function addScanHistoryItem(text) {
+            if (scanHistory.children[0]?.innerText.includes("No scans sent")) {
+                scanHistory.innerHTML = "";
+            }
+            const item = document.createElement("div");
+            item.className = "scan-item";
+            const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            item.innerHTML = `
         <span style="word-break: break-all; margin-right: 0.5rem;">${escapeHtml(String(text))}</span>
         <span style="color: var(--text-muted); font-size: 0.7rem; white-space: nowrap;">${now}</span>
       `;
-      scanHistory.insertBefore(item, scanHistory.firstChild);
-    }
+            scanHistory.insertBefore(item, scanHistory.firstChild);
+        }
 
-    function escapeHtml(text) {
-      return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-    }
-  </script>
+        function escapeHtml(text) {
+            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        }
+    </script>
 </body>
+
 </html>

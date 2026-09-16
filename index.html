@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>P2P Scanner Receiver Hub</title>
-  
+
   <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
@@ -22,8 +23,20 @@
       --warning: #f59e0b;
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background-color: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
 
     header {
       background: var(--surface);
@@ -34,43 +47,140 @@
       align-items: center;
     }
 
-    .logo-group { display: flex; align-items: center; gap: 0.75rem; }
-    .logo-icon { background: var(--primary); width: 36px; height: 36px; border-radius: 0.5rem; display: flex; align-items: center; justify-content: center; }
+    .logo-group {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .logo-icon {
+      background: var(--primary);
+      width: 36px;
+      height: 36px;
+      border-radius: 0.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
 
     .badge {
-      display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.9rem; border-radius: 9999px;
-      font-size: 0.85rem; font-weight: 600; background: #374151; color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.4rem 0.9rem;
+      border-radius: 9999px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      background: #374151;
+      color: var(--text-muted);
     }
-    .badge.waiting { background: rgba(245, 158, 11, 0.15); color: var(--warning); border: 1px solid rgba(245, 158, 11, 0.3); }
-    .badge.active { background: rgba(16, 185, 129, 0.15); color: var(--success); border: 1px solid rgba(16, 185, 129, 0.3); }
-    .badge-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+
+    .badge.waiting {
+      background: rgba(245, 158, 11, 0.15);
+      color: var(--warning);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+
+    .badge.active {
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--success);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .badge-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+    }
 
     main {
-      flex: 1; max-width: 1200px; width: 100%; margin: 2rem auto; padding: 0 1.5rem;
-      display: grid; grid-template-columns: 360px 1fr; gap: 2rem;
+      flex: 1;
+      max-width: 1200px;
+      width: 100%;
+      margin: 2rem auto;
+      padding: 0 1.5rem;
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 2rem;
     }
 
-    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 1rem; padding: 1.5rem; display: flex; flex-direction: column; }
-    .card-title { font-size: 1rem; font-weight: 600; margin-bottom: 1.25rem; display: flex; justify-content: space-between; align-items: center; }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 1rem;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .card-title {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 1.25rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
 
     .btn {
-      background: var(--primary); color: white; border: none; padding: 0.75rem 1rem; font-size: 0.9rem;
-      font-weight: 600; border-radius: 0.5rem; cursor: pointer; transition: all 0.2s; width: 100%;
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 0.75rem 1rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      width: 100%;
     }
-    .btn:hover { background: var(--primary-accent); }
-    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
-    .btn-secondary { background: transparent; border: 1px solid var(--border); color: var(--text); width: auto; padding: 0.4rem 0.75rem; font-size: 0.8rem; }
+
+    .btn:hover {
+      background: var(--primary-accent);
+    }
+
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+      width: auto;
+      padding: 0.4rem 0.75rem;
+      font-size: 0.8rem;
+    }
 
     #qrcode-wrapper {
-      background: white; padding: 1rem; border-radius: 0.75rem; margin: 1rem 0;
-      display: flex; justify-content: center; align-items: center; min-height: 200px;
+      background: white;
+      padding: 1rem;
+      border-radius: 0.75rem;
+      margin: 1rem 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 200px;
     }
 
     .code-display {
-      background: var(--surface-card); border: 1px solid var(--border); border-radius: 0.5rem;
-      padding: 0.75rem; text-align: center; margin-bottom: 1rem;
+      background: var(--surface-card);
+      border: 1px solid var(--border);
+      border-radius: 0.5rem;
+      padding: 0.75rem;
+      text-align: center;
+      margin-bottom: 1rem;
     }
-    .code-val { font-family: monospace; font-size: 1.25rem; font-weight: 700; color: var(--primary-accent); letter-spacing: 2px; }
+
+    .code-val {
+      font-family: monospace;
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--primary-accent);
+      letter-spacing: 2px;
+    }
 
     .device-tag {
       background: var(--surface-card);
@@ -84,27 +194,79 @@
       margin-top: 0.5rem;
     }
 
-    .stats-bar { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-bottom: 1.25rem; }
-    .stat-card { background: var(--surface-card); border: 1px solid var(--border); padding: 1rem; border-radius: 0.5rem; }
-    .stat-val { font-size: 1.5rem; font-weight: 700; color: var(--primary-accent); }
-    .stat-lbl { font-size: 0.75rem; color: var(--text-muted); }
-
-    .stream-list { list-style: none; overflow-y: auto; max-height: 480px; display: flex; flex-direction: column; gap: 0.75rem; }
-    .stream-item {
-      background: var(--surface-card); border: 1px solid var(--border); padding: 1rem; border-radius: 0.5rem;
-      display: flex; justify-content: space-between; align-items: center; font-family: monospace; font-size: 0.9rem;
+    .stats-bar {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+      margin-bottom: 1.25rem;
     }
-    .timestamp { font-size: 0.75rem; color: var(--text-muted); background: var(--surface); padding: 0.2rem 0.5rem; border-radius: 0.25rem; }
 
-    footer { background: var(--surface); border-top: 1px solid var(--border); padding: 1rem; text-align: center; font-size: 0.8rem; color: var(--text-muted); }
+    .stat-card {
+      background: var(--surface-card);
+      border: 1px solid var(--border);
+      padding: 1rem;
+      border-radius: 0.5rem;
+    }
+
+    .stat-val {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--primary-accent);
+    }
+
+    .stat-lbl {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .stream-list {
+      list-style: none;
+      overflow-y: auto;
+      max-height: 480px;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .stream-item {
+      background: var(--surface-card);
+      border: 1px solid var(--border);
+      padding: 1rem;
+      border-radius: 0.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-family: monospace;
+      font-size: 0.9rem;
+    }
+
+    .timestamp {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      background: var(--surface);
+      padding: 0.2rem 0.5rem;
+      border-radius: 0.25rem;
+    }
+
+    footer {
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding: 1rem;
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
   </style>
 </head>
+
 <body>
 
   <header>
     <div class="logo-group">
       <div class="logo-icon">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+        </svg>
       </div>
       <h1>WebRTC Receiver Hub</h1>
     </div>
@@ -117,7 +279,7 @@
   <main>
     <section class="card">
       <div class="card-title">Session Pairing</div>
-      
+
       <button id="session-btn" class="btn" onclick="initSession()">Generate Pairing Session</button>
 
       <div id="qrcode-wrapper">
@@ -182,12 +344,22 @@
       statusBadge.className = "badge waiting";
       statusText.innerText = "Server Connecting";
 
-      // Added Google STUN configuration for cross-network connectivity
+      // Updated with STUN + TURN relay configuration for cross-network WebRTC traversal
       peer = new Peer({
         config: {
           iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' }
+            { urls: 'stun:stun1.l.google.com:19302' },
+            {
+              urls: 'turn:openrelay.metered.ca:80',
+              username: 'openrelay',
+              credential: 'openrelay'
+            },
+            {
+              urls: 'turn:openrelay.metered.ca:443',
+              username: 'openrelay',
+              credential: 'openrelay'
+            }
           ]
         }
       });
@@ -195,7 +367,7 @@
       peer.on('open', (id) => {
         sessionBtn.disabled = false;
         sessionBtn.innerText = "Regenerate Session";
-        
+
         statusBadge.className = "badge waiting";
         statusText.innerText = "Waiting for Mobile...";
         connStateLbl.innerText = "Ready to Pair";
@@ -204,7 +376,7 @@
         peerCodeVal.innerText = id;
 
         qrWrapper.innerHTML = '<div id="qrcode"></div>';
-        
+
         setTimeout(() => {
           new QRCode(document.getElementById("qrcode"), {
             text: id,
@@ -217,7 +389,7 @@
       peer.on('connection', (conn) => {
         statusBadge.className = "badge active";
         statusText.innerText = "Mobile Connected";
-        
+
         connStateLbl.innerText = "Active Channel";
         connStateLbl.style.color = "var(--success)";
 
@@ -228,11 +400,11 @@
         conn.on('data', (data) => {
           if (typeof data === 'object' && data.type === 'DEVICE_INFO') {
             qrWrapper.innerHTML = `
-              <div style="text-align: center; width: 100%;">
-                <div style="color: var(--success); font-weight: 600; margin-bottom: 0.4rem; font-size: 0.85rem;">✅ Connected Device:</div>
-                <div class="device-tag">📱 ${escapeHtml(data.name)}</div>
-              </div>
-            `;
+          <div style="text-align: center; width: 100%;">
+            <div style="color: var(--success); font-weight: 600; margin-bottom: 0.4rem; font-size: 0.85rem;">✅ Connected Device:</div>
+            <div class="device-tag">📱 ${escapeHtml(data.name)}</div>
+          </div>
+        `;
           } else {
             appendStreamItem(data);
           }
@@ -254,6 +426,86 @@
         statusText.innerText = "Connection Failed";
         qrWrapper.innerHTML = `<span style="color: red; font-size: 0.8rem;">Failed to reach signaling server</span>`;
       });
+    }
+    if (peer) peer.destroy();
+
+    sessionBtn.disabled = true;
+    sessionBtn.innerText = "Connecting...";
+    statusBadge.className = "badge waiting";
+    statusText.innerText = "Server Connecting";
+
+    // Added Google STUN configuration for cross-network connectivity
+    peer = new Peer({
+      config: {
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' }
+        ]
+      }
+    });
+
+    peer.on('open', (id) => {
+      sessionBtn.disabled = false;
+      sessionBtn.innerText = "Regenerate Session";
+
+      statusBadge.className = "badge waiting";
+      statusText.innerText = "Waiting for Mobile...";
+      connStateLbl.innerText = "Ready to Pair";
+      connStateLbl.style.color = "var(--warning)";
+
+      peerCodeVal.innerText = id;
+
+      qrWrapper.innerHTML = '<div id="qrcode"></div>';
+
+      setTimeout(() => {
+        new QRCode(document.getElementById("qrcode"), {
+          text: id,
+          width: 170,
+          height: 170
+        });
+      }, 50);
+    });
+
+    peer.on('connection', (conn) => {
+      statusBadge.className = "badge active";
+      statusText.innerText = "Mobile Connected";
+
+      connStateLbl.innerText = "Active Channel";
+      connStateLbl.style.color = "var(--success)";
+
+      conn.on('open', () => {
+        conn.send({ type: 'DEVICE_INFO', name: getDeviceInfo() });
+      });
+
+      conn.on('data', (data) => {
+        if (typeof data === 'object' && data.type === 'DEVICE_INFO') {
+          qrWrapper.innerHTML = `
+              <div style="text-align: center; width: 100%;">
+                <div style="color: var(--success); font-weight: 600; margin-bottom: 0.4rem; font-size: 0.85rem;">✅ Connected Device:</div>
+                <div class="device-tag">📱 ${escapeHtml(data.name)}</div>
+              </div>
+            `;
+        } else {
+          appendStreamItem(data);
+        }
+      });
+
+      conn.on('close', () => {
+        statusBadge.className = "badge";
+        statusText.innerText = "Mobile Disconnected";
+        connStateLbl.innerText = "Disconnected";
+        connStateLbl.style.color = "var(--text-muted)";
+      });
+    });
+
+    peer.on('error', (err) => {
+      console.error("PeerJS Error:", err);
+      sessionBtn.disabled = false;
+      sessionBtn.innerText = "Retry Session";
+      statusBadge.className = "badge";
+      statusText.innerText = "Connection Failed";
+      qrWrapper.innerHTML = `<span style="color: red; font-size: 0.8rem;">Failed to reach signaling server</span>`;
+    });
     }
 
     function getDeviceInfo() {
@@ -299,4 +551,5 @@
     }
   </script>
 </body>
+
 </html>
