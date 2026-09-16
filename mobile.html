@@ -78,6 +78,9 @@
     .btn:active { transform: scale(0.98); }
     .btn:hover { background: var(--primary-hover); }
     .btn-secondary { background: var(--surface-card); border: 1px solid var(--surface-border); color: var(--text); }
+    .btn-danger { background: rgba(239, 68, 68, 0.2); border: 1px solid var(--danger); color: #fca5a5; }
+
+    .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.85rem; }
 
     .pc-device-badge {
       display: inline-flex; align-items: center; gap: 0.4rem;
@@ -116,6 +119,19 @@
       animation: fadeIn 0.25s ease-out;
     }
 
+    /* Connection Logs Floating Window */
+    .log-window {
+      position: fixed; bottom: 1rem; left: 50%; transform: translateX(-50%);
+      width: calc(100% - 2.5rem); max-width: 440px;
+      background: rgba(15, 23, 42, 0.95); border: 1px solid var(--surface-border);
+      backdrop-filter: blur(8px); border-radius: 0.75rem; padding: 0.6rem 0.85rem;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.4); z-index: 100;
+      display: flex; flex-direction: column; gap: 0.3rem; pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+    .log-header { font-size: 0.68rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    .log-msg { font-family: monospace; font-size: 0.78rem; color: #e2e8f0; word-break: break-all; }
+
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(-4px); }
       to { opacity: 1; transform: translateY(0); }
@@ -135,15 +151,24 @@
   </header>
 
   <main>
+    <!-- STEP 1: PAIRING SECTION -->
     <section class="card">
       <div id="step-title-container" class="pairing-header">
-        <h2 id="step-title" class="pairing-title">Pairing: Scan QR or Enter Code</h2>
-        <p class="pairing-sub">Connect to receiver hub on desktop</p>
+        <h2 id="step-title" class="pairing-title">Pairing: Scan Session QR Code</h2>
+        <p class="pairing-sub">Pair with desktop receiver to unlock inventory scanner</p>
       </div>
 
       <div id="manual-box" class="manual-pair-box">
         <input id="code-input" type="text" class="manual-input" placeholder="Enter Peer Code">
         <button class="btn" onclick="connectByCode()">Pair</button>
+      </div>
+    </section>
+
+    <!-- STEP 2: INVENTORY SCANNER (Visible only AFTER Connection) -->
+    <section id="inventory-section" class="card" style="display: none;">
+      <div class="pairing-header">
+        <h2 class="pairing-title">📦 Scan Inventory QR</h2>
+        <p class="pairing-sub">Items scanned here will transmit directly to PC log</p>
       </div>
 
       <div class="scanner-container">
@@ -153,19 +178,24 @@
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
           </div>
           <div style="font-weight: 600; font-size: 0.95rem;">Camera Access Required</div>
-          <div style="font-size: 0.78rem; color: var(--text-muted);">Grant camera permission to start continuous QR scanning.</div>
+          <div style="font-size: 0.78rem; color: var(--text-muted);">Grant camera permission to start scanning inventory.</div>
           <button id="enable-btn" class="btn" onclick="requestCameraAccess()">Enable Camera</button>
         </div>
 
         <div id="reader"></div>
       </div>
 
-      <!-- Option A: Snap Frame Button -->
-      <button id="manual-scan-btn" class="btn btn-secondary" style="width: 100%; margin-top: 0.85rem;" onclick="triggerManualDetection()">
-        📷 Snap / Detect Current Frame
-      </button>
+      <div class="action-grid">
+        <button id="manual-scan-btn" class="btn btn-secondary" onclick="triggerManualDetection()">
+          📷 Snap / Detect
+        </button>
+        <button id="clear-btn" class="btn btn-danger" onclick="clearDetection()">
+          🔄 Recapture / Clear
+        </button>
+      </div>
     </section>
 
+    <!-- TRANSMISSION HISTORY LOG -->
     <section class="card">
       <div class="scan-history-title">Transmission History</div>
       <div id="scan-history" class="scan-list">
@@ -173,6 +203,12 @@
       </div>
     </section>
   </main>
+
+  <!-- TEMPORARY CONNECTION LOG FLOATING WINDOW -->
+  <div id="log-window" class="log-window" style="opacity: 0;">
+    <div class="log-header">System Event Log</div>
+    <div id="log-msg" class="log-msg">Initializing P2P network...</div>
+  </div>
 
   <script>
     let peer = new Peer({
@@ -187,23 +223,41 @@
     let conn = null;
     let isPaired = false;
     let html5QrCode = null;
+    let logTimeout = null;
 
     const statusPill = document.getElementById("status-pill");
     const statusText = document.getElementById("status-text");
     const stepTitleContainer = document.getElementById("step-title-container");
     const scanHistory = document.getElementById("scan-history");
     const permOverlay = document.getElementById("cam-permission-overlay");
+    const inventorySection = document.getElementById("inventory-section");
+
+    // Push log messages to temporary floating window
+    function showLog(message) {
+      const windowEl = document.getElementById("log-window");
+      const msgEl = document.getElementById("log-msg");
+      
+      msgEl.innerText = message;
+      windowEl.style.opacity = "1";
+
+      if (logTimeout) clearTimeout(logTimeout);
+      logTimeout = setTimeout(() => {
+        windowEl.style.opacity = "0";
+      }, 4000);
+    }
+
+    showLog("WebRTC peer client created");
 
     function requestCameraAccess() {
       const btn = document.getElementById("enable-btn");
       btn.innerText = "Starting Camera...";
       btn.disabled = true;
 
-      html5QrCode = new Html5Qrcode("reader");
+      showLog("Requesting video stream hardware access...");
 
+      html5QrCode = new Html5Qrcode("reader");
       const config = { fps: 10, qrbox: { width: 220, height: 220 } };
 
-      // Try environment (back) camera first
       html5QrCode.start(
         { facingMode: "environment" },
         config,
@@ -211,25 +265,32 @@
         onScanError
       ).then(() => {
         permOverlay.style.display = "none";
-      }).catch(err => {
-        // Fallback: try default camera if facingMode fails
-        html5QrCode.start(
-          {},
-          config,
-          onScanSuccess,
-          onScanError
-        ).then(() => {
-          permOverlay.style.display = "none";
-        }).catch(err2 => {
-          alert("Camera Error: Please make sure browser camera permissions are allowed for this site.");
-          btn.innerText = "Enable Camera";
-          btn.disabled = false;
-        });
+        showLog("Camera activated successfully.");
+      }).catch(() => {
+        html5QrCode.start({}, config, onScanSuccess, onScanError)
+          .then(() => {
+            permOverlay.style.display = "none";
+            showLog("Camera activated (Fallback mode).");
+          }).catch(err => {
+            alert("Camera Error: Please check browser permissions.");
+            btn.innerText = "Enable Camera";
+            btn.disabled = false;
+            showLog("Camera Access Denied: " + err);
+          });
       });
     }
 
     function onScanError(err) {
-      // Continuous background scanner loop
+      // Continuous scanner loop feedback
+    }
+
+    function clearDetection() {
+      const videoElement = document.querySelector("#reader video");
+      if (videoElement) {
+        videoElement.style.filter = "none";
+      }
+      showLog("Detection state cleared. Ready for next capture.");
+      if (navigator.vibrate) navigator.vibrate(50);
     }
 
     function connectByCode() {
@@ -238,21 +299,22 @@
     }
 
     function onScanSuccess(decodedText) {
-      if (!isPaired) {
-        initiatePairing(decodedText);
-      } else if (conn && conn.open) {
+      if (conn && conn.open) {
         conn.send(decodedText);
         if (navigator.vibrate) navigator.vibrate(80);
         addScanHistoryItem(decodedText);
+        showLog(`Scanned & Sent: ${decodedText}`);
       }
     }
 
     function triggerManualDetection() {
       const videoElement = document.querySelector("#reader video");
       if (!videoElement) {
-        alert("Please tap 'Enable Camera' first to launch the video stream.");
+        alert("Please tap 'Enable Camera' first.");
         return;
       }
+
+      showLog("Grabbing frame snapshot for detection...");
 
       const canvas = document.createElement("canvas");
       canvas.width = videoElement.videoWidth;
@@ -266,16 +328,19 @@
         const file = new File([blob], "snapshot.png", { type: "image/png" });
         scannerEngine.scanFile(file, true)
           .then(decodedText => {
+            videoElement.style.filter = "brightness(1.2) contrast(1.1)";
             onScanSuccess(decodedText);
           })
-          .catch(err => {
-            alert("No clear QR code found in current frame. Re-align and try again.");
+          .catch(() => {
+            showLog("No QR code detected in snapshot frame.");
+            alert("No clear QR code found in frame. Recapture or realign.");
           });
       });
     }
 
     function initiatePairing(targetPeerId) {
       statusText.innerText = "Pairing...";
+      showLog(`Connecting to peer: ${targetPeerId}`);
       conn = peer.connect(targetPeerId);
 
       conn.on('open', () => {
@@ -286,6 +351,9 @@
         conn.send({ type: 'DEVICE_INFO', name: getMobileDeviceInfo() });
 
         document.getElementById("manual-box").style.display = "none";
+        inventorySection.style.display = "block"; // Reveal scanner on successful connection
+
+        showLog("Connection established! Inventory options unlocked.");
         if (navigator.vibrate) navigator.vibrate(200);
       });
 
@@ -294,7 +362,6 @@
           stepTitleContainer.innerHTML = `
             <div style="font-size: 0.8rem; color: var(--success); font-weight: 600; margin-bottom: 0.2rem;">✅ CONNECTED RECEIVER</div>
             <div class="pc-device-badge">💻 ${escapeHtml(data.name)}</div>
-            <p class="pairing-sub" style="margin-top: 0.5rem;">Point camera at target QRs to transmit payload instantly.</p>
           `;
         }
       });
@@ -303,11 +370,14 @@
         isPaired = false;
         statusPill.classList.remove("connected");
         statusText.innerText = "Disconnected";
+        inventorySection.style.display = "none"; // Hide scanner on disconnect
+        
         stepTitleContainer.innerHTML = `
-          <h2 id="step-title" class="pairing-title">Pairing: Scan QR or Enter Code</h2>
-          <p class="pairing-sub">Connect to receiver hub on desktop</p>
+          <h2 id="step-title" class="pairing-title">Pairing: Scan Session QR Code</h2>
+          <p class="pairing-sub">Pair with desktop receiver to unlock inventory scanner</p>
         `;
         document.getElementById("manual-box").style.display = "flex";
+        showLog("P2P session closed by peer.");
       });
     }
 
