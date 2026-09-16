@@ -78,16 +78,10 @@
     .btn:active { transform: scale(0.98); }
     .btn:hover { background: var(--primary-hover); }
     .btn-secondary { background: var(--surface-card); border: 1px solid var(--surface-border); color: var(--text); }
+    .btn-warning { background: rgba(245, 158, 11, 0.2); border: 1px solid var(--warning); color: #fde68a; }
     .btn-danger { background: rgba(239, 68, 68, 0.2); border: 1px solid var(--danger); color: #fca5a5; }
 
     .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.85rem; }
-
-    .pc-device-badge {
-      display: inline-flex; align-items: center; gap: 0.4rem;
-      background: rgba(99, 102, 241, 0.15); border: 1px solid var(--primary);
-      padding: 0.4rem 0.85rem; border-radius: 0.5rem; font-size: 0.85rem;
-      color: #a5b4fc; font-weight: 600; margin-top: 0.5rem;
-    }
 
     .scanner-container {
       position: relative;
@@ -100,10 +94,18 @@
     #reader video { width: 100% !important; object-fit: cover !important; border-radius: 0.85rem; }
     #reader__dashboard { display: none !important; }
 
+    .mode-tag {
+      position: absolute; top: 12px; left: 12px; z-index: 12;
+      background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(8px);
+      border: 1px solid var(--surface-border); padding: 0.35rem 0.65rem;
+      border-radius: 0.5rem; font-size: 0.72rem; font-weight: 600; color: #a5b4fc;
+      display: flex; align-items: center; gap: 0.4rem;
+    }
+
     .permission-overlay {
       position: absolute; inset: 0; background: var(--surface-card);
       display: flex; flex-direction: column; align-items: center; justify-content: center;
-      padding: 1.5rem; text-align: center; z-index: 10; gap: 0.85rem;
+      padding: 1.5rem; text-align: center; z-index: 15; gap: 0.85rem;
     }
     .permission-icon {
       width: 48px; height: 48px; border-radius: 50%; background: rgba(99, 102, 241, 0.15);
@@ -119,7 +121,6 @@
       animation: fadeIn 0.25s ease-out;
     }
 
-    /* Connection Logs Floating Window */
     .log-window {
       position: fixed; bottom: 1rem; left: 50%; transform: translateX(-50%);
       width: calc(100% - 2.5rem); max-width: 440px;
@@ -151,46 +152,48 @@
   </header>
 
   <main>
-    <!-- STEP 1: PAIRING SECTION -->
+    <!-- STEP 1: PAIRING & CAMERA CONTAINER -->
     <section class="card">
       <div id="step-title-container" class="pairing-header">
-        <h2 id="step-title" class="pairing-title">Pairing: Scan Session QR Code</h2>
-        <p class="pairing-sub">Pair with desktop receiver to unlock inventory scanner</p>
+        <h2 id="step-title" class="pairing-title">Pairing Session</h2>
+        <p id="step-sub" class="pairing-sub">Scan desktop QR code or enter code manually to pair</p>
       </div>
 
       <div id="manual-box" class="manual-pair-box">
         <input id="code-input" type="text" class="manual-input" placeholder="Enter Peer Code">
         <button class="btn" onclick="connectByCode()">Pair</button>
       </div>
-    </section>
 
-    <!-- STEP 2: INVENTORY SCANNER (Visible only AFTER Connection) -->
-    <section id="inventory-section" class="card" style="display: none;">
-      <div class="pairing-header">
-        <h2 class="pairing-title">📦 Scan Inventory QR</h2>
-        <p class="pairing-sub">Items scanned here will transmit directly to PC log</p>
-      </div>
-
+      <!-- CAMERA SCANNER CONTAINER -->
       <div class="scanner-container">
-        <!-- Camera Permission Overlay UI -->
+        <!-- Live Camera Mode Indicator -->
+        <div id="mode-badge" class="mode-tag">
+          📷 <span>Pairing Mode: Scan PC QR Code</span>
+        </div>
+
+        <!-- Camera Permission Overlay -->
         <div id="cam-permission-overlay" class="permission-overlay">
           <div class="permission-icon">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
           </div>
           <div style="font-weight: 600; font-size: 0.95rem;">Camera Access Required</div>
-          <div style="font-size: 0.78rem; color: var(--text-muted);">Grant camera permission to start scanning inventory.</div>
-          <button id="enable-btn" class="btn" onclick="requestCameraAccess()">Enable Camera</button>
+          <div style="font-size: 0.78rem; color: var(--text-muted);">Enable camera to scan desktop pairing code or inventory items.</div>
+          <div style="display: flex; gap: 0.5rem;">
+            <button id="enable-btn" class="btn" onclick="requestCameraAccess()">Enable Camera</button>
+            <button class="btn btn-warning" onclick="refreshCamera()">🔄 Refresh</button>
+          </div>
         </div>
 
         <div id="reader"></div>
       </div>
 
+      <!-- CONTROLS & REFRESH/RECAPTURE OPTIONS -->
       <div class="action-grid">
         <button id="manual-scan-btn" class="btn btn-secondary" onclick="triggerManualDetection()">
           📷 Snap / Detect
         </button>
-        <button id="clear-btn" class="btn btn-danger" onclick="clearDetection()">
-          🔄 Recapture / Clear
+        <button id="refresh-cam-btn" class="btn btn-warning" onclick="refreshCamera()">
+          🔄 Refresh Camera
         </button>
       </div>
     </section>
@@ -204,7 +207,7 @@
     </section>
   </main>
 
-  <!-- TEMPORARY CONNECTION LOG FLOATING WINDOW -->
+  <!-- TEMPORARY SYSTEM EVENT LOG -->
   <div id="log-window" class="log-window" style="opacity: 0;">
     <div class="log-header">System Event Log</div>
     <div id="log-msg" class="log-msg">Initializing P2P network...</div>
@@ -230,9 +233,8 @@
     const stepTitleContainer = document.getElementById("step-title-container");
     const scanHistory = document.getElementById("scan-history");
     const permOverlay = document.getElementById("cam-permission-overlay");
-    const inventorySection = document.getElementById("inventory-section");
+    const modeBadge = document.getElementById("mode-badge");
 
-    // Push log messages to temporary floating window
     function showLog(message) {
       const windowEl = document.getElementById("log-window");
       const msgEl = document.getElementById("log-msg");
@@ -246,7 +248,28 @@
       }, 4000);
     }
 
-    showLog("WebRTC peer client created");
+    showLog("WebRTC peer client initialized.");
+
+    async function stopCamera() {
+      if (html5QrCode && html5QrCode.isScanning) {
+        try {
+          await html5QrCode.stop();
+          html5QrCode.clear();
+        } catch (e) {
+          console.warn("Camera stop warning:", e);
+        }
+      }
+    }
+
+    async function refreshCamera() {
+      showLog("Restarting camera stream...");
+      await stopCamera();
+      permOverlay.style.display = "flex";
+      const btn = document.getElementById("enable-btn");
+      btn.innerText = "Enable Camera";
+      btn.disabled = false;
+      requestCameraAccess();
+    }
 
     function requestCameraAccess() {
       const btn = document.getElementById("enable-btn");
@@ -265,14 +288,14 @@
         onScanError
       ).then(() => {
         permOverlay.style.display = "none";
-        showLog("Camera activated successfully.");
+        showLog("Camera activated. Point at desktop QR code.");
       }).catch(() => {
         html5QrCode.start({}, config, onScanSuccess, onScanError)
           .then(() => {
             permOverlay.style.display = "none";
             showLog("Camera activated (Fallback mode).");
           }).catch(err => {
-            alert("Camera Error: Please check browser permissions.");
+            alert("Camera Error: Check browser permissions or tap 'Refresh Camera'.");
             btn.innerText = "Enable Camera";
             btn.disabled = false;
             showLog("Camera Access Denied: " + err);
@@ -281,16 +304,7 @@
     }
 
     function onScanError(err) {
-      // Continuous scanner loop feedback
-    }
-
-    function clearDetection() {
-      const videoElement = document.querySelector("#reader video");
-      if (videoElement) {
-        videoElement.style.filter = "none";
-      }
-      showLog("Detection state cleared. Ready for next capture.");
-      if (navigator.vibrate) navigator.vibrate(50);
+      // Loop scan error catch
     }
 
     function connectByCode() {
@@ -299,11 +313,16 @@
     }
 
     function onScanSuccess(decodedText) {
-      if (conn && conn.open) {
-        conn.send(decodedText);
-        if (navigator.vibrate) navigator.vibrate(80);
-        addScanHistoryItem(decodedText);
-        showLog(`Scanned & Sent: ${decodedText}`);
+      if (!isPaired) {
+        showLog(`Scanned Pairing Code: ${decodedText}`);
+        initiatePairing(decodedText);
+      } else {
+        if (conn && conn.open) {
+          conn.send(decodedText);
+          if (navigator.vibrate) navigator.vibrate(80);
+          addScanHistoryItem(decodedText);
+          showLog(`Transmitted: ${decodedText}`);
+        }
       }
     }
 
@@ -314,7 +333,7 @@
         return;
       }
 
-      showLog("Grabbing frame snapshot for detection...");
+      showLog("Capturing snapshot frame...");
 
       const canvas = document.createElement("canvas");
       canvas.width = videoElement.videoWidth;
@@ -329,10 +348,11 @@
         scannerEngine.scanFile(file, true)
           .then(decodedText => {
             videoElement.style.filter = "brightness(1.2) contrast(1.1)";
+            setTimeout(() => { videoElement.style.filter = "none"; }, 800);
             onScanSuccess(decodedText);
           })
           .catch(() => {
-            showLog("No QR code detected in snapshot frame.");
+            showLog("No QR code detected in frame.");
             alert("No clear QR code found in frame. Recapture or realign.");
           });
       });
@@ -351,17 +371,23 @@
         conn.send({ type: 'DEVICE_INFO', name: getMobileDeviceInfo() });
 
         document.getElementById("manual-box").style.display = "none";
-        inventorySection.style.display = "block"; // Reveal scanner on successful connection
+        modeBadge.innerHTML = `📦 <span>Inventory Scanning Active</span>`;
+        modeBadge.style.color = "var(--success)";
 
-        showLog("Connection established! Inventory options unlocked.");
+        stepTitleContainer.innerHTML = `
+          <h2 class="pairing-title">📦 Scan Inventory QR</h2>
+          <p class="pairing-sub">Camera active: Scans will transmit live to PC</p>
+        `;
+
+        showLog("Connection established! Inventory scanning active.");
         if (navigator.vibrate) navigator.vibrate(200);
       });
 
       conn.on('data', (data) => {
         if (typeof data === 'object' && data.type === 'DEVICE_INFO') {
           stepTitleContainer.innerHTML = `
-            <div style="font-size: 0.8rem; color: var(--success); font-weight: 600; margin-bottom: 0.2rem;">✅ CONNECTED RECEIVER</div>
-            <div class="pc-device-badge">💻 ${escapeHtml(data.name)}</div>
+            <div style="font-size: 0.8rem; color: var(--success); font-weight: 600; margin-bottom: 0.2rem;">✅ CONNECTED TO PC</div>
+            <div style="font-size: 0.95rem; font-weight: 600;">💻 ${escapeHtml(data.name)}</div>
           `;
         }
       });
@@ -370,11 +396,12 @@
         isPaired = false;
         statusPill.classList.remove("connected");
         statusText.innerText = "Disconnected";
-        inventorySection.style.display = "none"; // Hide scanner on disconnect
+        modeBadge.innerHTML = `📷 <span>Pairing Mode: Scan PC QR Code</span>`;
+        modeBadge.style.color = "#a5b4fc";
         
         stepTitleContainer.innerHTML = `
-          <h2 id="step-title" class="pairing-title">Pairing: Scan Session QR Code</h2>
-          <p class="pairing-sub">Pair with desktop receiver to unlock inventory scanner</p>
+          <h2 id="step-title" class="pairing-title">Pairing Session</h2>
+          <p class="pairing-sub">Scan desktop QR code or enter code manually to pair</p>
         `;
         document.getElementById("manual-box").style.display = "flex";
         showLog("P2P session closed by peer.");
@@ -384,14 +411,12 @@
     function getMobileDeviceInfo() {
       const ua = navigator.userAgent;
       let device = "Mobile Device";
-      
       if (ua.includes("iPhone")) device = "iPhone";
       else if (ua.includes("iPad")) device = "iPad";
       else if (ua.includes("Android")) {
         const match = ua.match(/Android\s+[\d\.]+;\s*([^;)]+)/);
         device = match ? match[1] : "Android Device";
       }
-
       return device;
     }
 
