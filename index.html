@@ -427,7 +427,6 @@
         qrWrapper.innerHTML = `<span style="color: red; font-size: 0.8rem;">Failed to reach signaling server</span>`;
       });
     }
-
     if (peer) peer.destroy();
 
     sessionBtn.disabled = true;
@@ -507,6 +506,7 @@
       statusText.innerText = "Connection Failed";
       qrWrapper.innerHTML = `<span style="color: red; font-size: 0.8rem;">Failed to reach signaling server</span>`;
     });
+    }
 
     function getDeviceInfo() {
       const ua = navigator.userAgent;
@@ -538,15 +538,6 @@
       `;
 
       streamList.insertBefore(li, streamList.firstChild);
-
-      // Trigger Python autotype script running on localhost
-      fetch('http://127.0.0.1:5000/type', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: String(text) })
-      }).catch(() => {
-        console.warn("Python autotype.py is not running.");
-      });
     }
 
     function clearLogs() {
