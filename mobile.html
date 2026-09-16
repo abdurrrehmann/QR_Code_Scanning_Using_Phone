@@ -73,8 +73,9 @@
       background: var(--primary); color: white; border: none; padding: 0.65rem 1.1rem;
       border-radius: 0.65rem; font-weight: 600; font-size: 0.85rem; cursor: pointer;
       display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;
-      transition: all 0.2s ease; active { transform: scale(0.98); }
+      transition: all 0.2s ease;
     }
+    .btn:active { transform: scale(0.98); }
     .btn:hover { background: var(--primary-hover); }
     .btn-secondary { background: var(--surface-card); border: 1px solid var(--surface-border); color: var(--text); }
 
@@ -89,14 +90,13 @@
       position: relative;
       width: 100%; border-radius: 1rem; overflow: hidden;
       background: #000; border: 1px solid var(--surface-border);
-      min-height: 240px; display: flex; align-items: center; justify-content: center;
+      min-height: 250px; display: flex; align-items: center; justify-content: center;
     }
 
     #reader { width: 100%; border: none !important; }
-    #reader video { object-fit: cover !important; border-radius: 0.85rem; }
+    #reader video { width: 100% !important; object-fit: cover !important; border-radius: 0.85rem; }
     #reader__dashboard { display: none !important; }
 
-    /* Custom Camera Permission Prompt Overlay */
     .permission-overlay {
       position: absolute; inset: 0; background: var(--surface-card);
       display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -153,16 +153,16 @@
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
           </div>
           <div style="font-weight: 600; font-size: 0.95rem;">Camera Access Required</div>
-          <div style="font-size: 0.78rem; color: var(--text-muted);">Grant camera permission to automatically scan QR codes.</div>
-          <button class="btn" onclick="requestCameraAccess()">Enable Camera</button>
+          <div style="font-size: 0.78rem; color: var(--text-muted);">Grant camera permission to start continuous QR scanning.</div>
+          <button id="enable-btn" class="btn" onclick="requestCameraAccess()">Enable Camera</button>
         </div>
 
         <div id="reader"></div>
       </div>
 
-      <!-- Option A: Manual Snap/Detect Button -->
+      <!-- Option A: Snap Frame Button -->
       <button id="manual-scan-btn" class="btn btn-secondary" style="width: 100%; margin-top: 0.85rem;" onclick="triggerManualDetection()">
-        📷 Detect / Snap Current Frame
+        📷 Snap / Detect Current Frame
       </button>
     </section>
 
@@ -186,7 +186,7 @@
     
     let conn = null;
     let isPaired = false;
-    let scanner = null;
+    let html5QrCode = null;
 
     const statusPill = document.getElementById("status-pill");
     const statusText = document.getElementById("status-text");
@@ -195,17 +195,41 @@
     const permOverlay = document.getElementById("cam-permission-overlay");
 
     function requestCameraAccess() {
-      permOverlay.style.display = "none";
-      scanner = new Html5QrcodeScanner("reader", { 
-        fps: 15, 
-        qrbox: { width: 220, height: 220 },
-        rememberLastUsedCamera: true
+      const btn = document.getElementById("enable-btn");
+      btn.innerText = "Starting Camera...";
+      btn.disabled = true;
+
+      html5QrCode = new Html5Qrcode("reader");
+
+      const config = { fps: 10, qrbox: { width: 220, height: 220 } };
+
+      // Try environment (back) camera first
+      html5QrCode.start(
+        { facingMode: "environment" },
+        config,
+        onScanSuccess,
+        onScanError
+      ).then(() => {
+        permOverlay.style.display = "none";
+      }).catch(err => {
+        // Fallback: try default camera if facingMode fails
+        html5QrCode.start(
+          {},
+          config,
+          onScanSuccess,
+          onScanError
+        ).then(() => {
+          permOverlay.style.display = "none";
+        }).catch(err2 => {
+          alert("Camera Error: Please make sure browser camera permissions are allowed for this site.");
+          btn.innerText = "Enable Camera";
+          btn.disabled = false;
+        });
       });
-      scanner.render(onScanSuccess, onScanError);
     }
 
     function onScanError(err) {
-      // Keep running continuously
+      // Continuous background scanner loop
     }
 
     function connectByCode() {
@@ -223,11 +247,10 @@
       }
     }
 
-    // Option A: Manual Frame Detection
     function triggerManualDetection() {
       const videoElement = document.querySelector("#reader video");
       if (!videoElement) {
-        alert("Please tap 'Enable Camera' first to start video stream.");
+        alert("Please tap 'Enable Camera' first to launch the video stream.");
         return;
       }
 
@@ -237,16 +260,16 @@
       const ctx = canvas.getContext("2d");
       ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
 
-      const html5QrCode = new Html5Qrcode("reader");
+      const scannerEngine = new Html5Qrcode("reader");
       
       canvas.toBlob((blob) => {
         const file = new File([blob], "snapshot.png", { type: "image/png" });
-        html5QrCode.scanFile(file, true)
+        scannerEngine.scanFile(file, true)
           .then(decodedText => {
             onScanSuccess(decodedText);
           })
           .catch(err => {
-            alert("No QR code detected in current frame. Re-align and try again.");
+            alert("No clear QR code found in current frame. Re-align and try again.");
           });
       });
     }
