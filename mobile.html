@@ -1,293 +1,324 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Mobile WebRTC Scanner</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Mobile WebRTC Scanner</title>
+  
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <script src="https://unpkg.com/html5-qrcode"></script>
 
-    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-    <script src="https://unpkg.com/html5-qrcode"></script>
+  <style>
+    :root {
+      --primary: #6366f1;
+      --primary-hover: #4f46e5;
+      --bg: #090d16;
+      --surface: #131c2e;
+      --surface-card: #1e293b;
+      --surface-border: #334155;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+    }
 
-    <style>
-        :root {
-            --primary: #6366f1;
-            --bg: #0f172a;
-            --surface: #1e293b;
-            --surface-border: #334155;
-            --text: #f8fafc;
-            --text-muted: #94a3b8;
-            --success: #10b981;
-            --danger: #ef4444;
-        }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
+    body { background-color: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        }
+    header {
+      background: rgba(19, 28, 46, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--surface-border);
+      padding: 0.9rem 1.25rem;
+      position: sticky; top: 0; z-index: 20;
+      display: flex; align-items: center; justify-content: space-between;
+    }
 
-        body {
-            background-color: var(--bg);
-            color: var(--text);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
+    .brand-title { font-size: 1rem; font-weight: 700; letter-spacing: -0.02em; display: flex; align-items: center; gap: 0.5rem; }
 
-        header {
-            background: rgba(30, 41, 59, 0.8);
-            backdrop-filter: blur(12px);
-            border-bottom: 1px solid var(--surface-border);
-            padding: 1rem;
-            position: sticky;
-            top: 0;
-            z-index: 10;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
+    .status-pill {
+      display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.35rem 0.8rem; border-radius: 9999px;
+      font-size: 0.75rem; font-weight: 600; background: rgba(239, 68, 68, 0.12); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.3);
+      transition: all 0.3s ease;
+    }
+    .status-pill.connected { background: rgba(16, 185, 129, 0.12); color: var(--success); border-color: rgba(16, 185, 129, 0.3); }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; background-color: currentColor; }
+    .status-pill.connected .status-dot { box-shadow: 0 0 8px var(--success); }
 
-        .status-pill {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.4rem;
-            padding: 0.35rem 0.75rem;
-            border-radius: 9999px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            background: rgba(239, 68, 68, 0.15);
-            color: var(--danger);
-            border: 1px solid rgba(239, 68, 68, 0.3);
-        }
+    main { flex: 1; padding: 1.25rem; display: flex; flex-direction: column; gap: 1.25rem; max-width: 480px; margin: 0 auto; width: 100%; }
 
-        .status-pill.connected {
-            background: rgba(16, 185, 129, 0.15);
-            color: var(--success);
-            border-color: rgba(16, 185, 129, 0.3);
-        }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--surface-border);
+      border-radius: 1.25rem;
+      padding: 1.25rem;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+    }
 
-        .status-dot {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            background-color: currentColor;
-        }
+    .pairing-header { margin-bottom: 1rem; }
+    .pairing-title { font-size: 0.95rem; font-weight: 600; color: var(--text); }
+    .pairing-sub { font-size: 0.78rem; color: var(--text-muted); margin-top: 0.25rem; }
 
-        main {
-            flex: 1;
-            padding: 1.25rem;
-            display: flex;
-            flex-direction: column;
-            gap: 1.25rem;
-            max-width: 500px;
-            margin: 0 auto;
-            width: 100%;
-        }
+    .manual-pair-box { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+    .manual-input {
+      flex: 1; background: var(--bg); border: 1px solid var(--surface-border); border-radius: 0.65rem;
+      padding: 0.65rem 0.85rem; color: white; font-family: monospace; font-size: 0.9rem;
+      outline: none; transition: border-color 0.2s;
+    }
+    .manual-input:focus { border-color: var(--primary); }
 
-        .card {
-            background: var(--surface);
-            border: 1px solid var(--surface-border);
-            border-radius: 1rem;
-            padding: 1.25rem;
-        }
+    .btn {
+      background: var(--primary); color: white; border: none; padding: 0.65rem 1.1rem;
+      border-radius: 0.65rem; font-weight: 600; font-size: 0.85rem; cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;
+      transition: all 0.2s ease; active { transform: scale(0.98); }
+    }
+    .btn:hover { background: var(--primary-hover); }
+    .btn-secondary { background: var(--surface-card); border: 1px solid var(--surface-border); color: var(--text); }
 
-        .manual-pair-box {
-            display: flex;
-            gap: 0.5rem;
-            margin-bottom: 1rem;
-        }
+    .pc-device-badge {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      background: rgba(99, 102, 241, 0.15); border: 1px solid var(--primary);
+      padding: 0.4rem 0.85rem; border-radius: 0.5rem; font-size: 0.85rem;
+      color: #a5b4fc; font-weight: 600; margin-top: 0.5rem;
+    }
 
-        .manual-input {
-            flex: 1;
-            background: var(--bg);
-            border: 1px solid var(--surface-border);
-            border-radius: 0.5rem;
-            padding: 0.6rem 0.8rem;
-            color: white;
-            font-family: monospace;
-            /* Removed text-transform so exact casing is preserved */
-        }
+    .scanner-container {
+      position: relative;
+      width: 100%; border-radius: 1rem; overflow: hidden;
+      background: #000; border: 1px solid var(--surface-border);
+      min-height: 240px; display: flex; align-items: center; justify-content: center;
+    }
 
-        .btn-connect {
-            background: var(--primary);
-            color: white;
-            border: none;
-            padding: 0.6rem 1rem;
-            border-radius: 0.5rem;
-            font-weight: 600;
-            cursor: pointer;
-        }
+    #reader { width: 100%; border: none !important; }
+    #reader video { object-fit: cover !important; border-radius: 0.85rem; }
+    #reader__dashboard { display: none !important; }
 
-        .pc-device-badge {
-            display: inline-block;
-            background: rgba(99, 102, 241, 0.2);
-            border: 1px solid var(--primary);
-            padding: 0.35rem 0.75rem;
-            border-radius: 0.375rem;
-            font-size: 0.85rem;
-            color: #a5b4fc;
-            margin-top: 0.4rem;
-            font-weight: 600;
-        }
+    /* Custom Camera Permission Prompt Overlay */
+    .permission-overlay {
+      position: absolute; inset: 0; background: var(--surface-card);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 1.5rem; text-align: center; z-index: 10; gap: 0.85rem;
+    }
+    .permission-icon {
+      width: 48px; height: 48px; border-radius: 50%; background: rgba(99, 102, 241, 0.15);
+      color: var(--primary); display: flex; align-items: center; justify-content: center;
+    }
 
-        .scanner-viewport {
-            width: 100%;
-            border-radius: 0.75rem;
-            overflow: hidden;
-            background: #000;
-            border: 2px dashed var(--surface-border);
-        }
+    .scan-history-title { font-size: 0.85rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    .scan-list { display: flex; flex-direction: column; gap: 0.5rem; max-height: 200px; overflow-y: auto; }
+    .scan-item {
+      background: var(--bg); border: 1px solid var(--surface-border); padding: 0.75rem 0.85rem;
+      border-radius: 0.65rem; font-family: monospace; font-size: 0.85rem;
+      display: flex; justify-content: space-between; align-items: center;
+      animation: fadeIn 0.25s ease-out;
+    }
 
-        #reader video {
-            object-fit: cover !important;
-        }
-
-        .scan-item {
-            background: rgba(15, 23, 42, 0.6);
-            border: 1px solid var(--surface-border);
-            padding: 0.75rem;
-            border-radius: 0.5rem;
-            font-family: monospace;
-            font-size: 0.85rem;
-            display: flex;
-            justify-content: space-between;
-            margin-top: 0.5rem;
-        }
-    </style>
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
 </head>
-
 <body>
 
-    <header>
-        <strong style="font-size: 1rem;">Mobile Scanner</strong>
-        <div id="status-pill" class="status-pill">
-            <div class="status-dot"></div>
-            <span id="status-text">Unpaired</span>
+  <header>
+    <div class="brand-title">
+      <span>📱</span> Mobile Scanner
+    </div>
+    <div id="status-pill" class="status-pill">
+      <div class="status-dot"></div>
+      <span id="status-text">Unpaired</span>
+    </div>
+  </header>
+
+  <main>
+    <section class="card">
+      <div id="step-title-container" class="pairing-header">
+        <h2 id="step-title" class="pairing-title">Pairing: Scan QR or Enter Code</h2>
+        <p class="pairing-sub">Connect to receiver hub on desktop</p>
+      </div>
+
+      <div id="manual-box" class="manual-pair-box">
+        <input id="code-input" type="text" class="manual-input" placeholder="Enter Peer Code">
+        <button class="btn" onclick="connectByCode()">Pair</button>
+      </div>
+
+      <div class="scanner-container">
+        <!-- Camera Permission Overlay UI -->
+        <div id="cam-permission-overlay" class="permission-overlay">
+          <div class="permission-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          </div>
+          <div style="font-weight: 600; font-size: 0.95rem;">Camera Access Required</div>
+          <div style="font-size: 0.78rem; color: var(--text-muted);">Grant camera permission to automatically scan QR codes.</div>
+          <button class="btn" onclick="requestCameraAccess()">Enable Camera</button>
         </div>
-    </header>
 
-    <main>
-        <section class="card">
-            <div id="step-title-container">
-                <h2 id="step-title" style="font-size: 0.95rem; margin-bottom: 0.75rem;">Pairing: Scan QR or Enter Code
-                </h2>
-            </div>
+        <div id="reader"></div>
+      </div>
 
-            <div id="manual-box" class="manual-pair-box">
-                <input id="code-input" type="text" class="manual-input" placeholder="Enter Peer Code">
-                <button class="btn-connect" onclick="connectByCode()">Pair</button>
-            </div>
+      <!-- Option A: Manual Snap/Detect Button -->
+      <button id="manual-scan-btn" class="btn btn-secondary" style="width: 100%; margin-top: 0.85rem;" onclick="triggerManualDetection()">
+        📷 Detect / Snap Current Frame
+      </button>
+    </section>
 
-            <div class="scanner-viewport">
-                <div id="reader"></div>
-            </div>
-        </section>
+    <section class="card">
+      <div class="scan-history-title">Transmission History</div>
+      <div id="scan-history" class="scan-list">
+        <div style="text-align: center; color: var(--text-muted); font-size: 0.8rem; padding: 1.5rem 0;">No scans sent yet</div>
+      </div>
+    </section>
+  </main>
 
-        <section class="card">
-            <h3 style="font-size: 0.85rem; color: var(--text-muted);">Transmission History</h3>
-            <div id="scan-history">
-                <div style="text-align: center; color: var(--text-muted); font-size: 0.8rem; padding: 1rem;">No scans
-                    sent</div>
-            </div>
-        </section>
-    </main>
+  <script>
+    let peer = new Peer({
+      config: {
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' }
+        ]
+      }
+    });
+    
+    let conn = null;
+    let isPaired = false;
+    let scanner = null;
 
-    <script>
-        let peer = new Peer();
-        let conn = null;
-        let isPaired = false;
-        let scanner = null;
+    const statusPill = document.getElementById("status-pill");
+    const statusText = document.getElementById("status-text");
+    const stepTitleContainer = document.getElementById("step-title-container");
+    const scanHistory = document.getElementById("scan-history");
+    const permOverlay = document.getElementById("cam-permission-overlay");
 
-        const statusPill = document.getElementById("status-pill");
-        const statusText = document.getElementById("status-text");
-        const stepTitleContainer = document.getElementById("step-title-container");
-        const scanHistory = document.getElementById("scan-history");
+    function requestCameraAccess() {
+      permOverlay.style.display = "none";
+      scanner = new Html5QrcodeScanner("reader", { 
+        fps: 15, 
+        qrbox: { width: 220, height: 220 },
+        rememberLastUsedCamera: true
+      });
+      scanner.render(onScanSuccess, onScanError);
+    }
 
-        window.addEventListener("load", () => {
-            scanner = new Html5QrcodeScanner("reader", { fps: 15, qrbox: { width: 220, height: 220 } });
-            scanner.render(onScanSuccess);
-        });
+    function onScanError(err) {
+      // Keep running continuously
+    }
 
-        function connectByCode() {
-            const code = document.getElementById("code-input").value.trim();
-            if (code) initiatePairing(code);
-        }
+    function connectByCode() {
+      const code = document.getElementById("code-input").value.trim();
+      if (code) initiatePairing(code);
+    }
 
-        function onScanSuccess(decodedText) {
-            if (!isPaired) {
-                initiatePairing(decodedText);
-            } else if (conn && conn.open) {
-                conn.send(decodedText);
-                if (navigator.vibrate) navigator.vibrate(80);
-                addScanHistoryItem(decodedText);
-            }
-        }
+    function onScanSuccess(decodedText) {
+      if (!isPaired) {
+        initiatePairing(decodedText);
+      } else if (conn && conn.open) {
+        conn.send(decodedText);
+        if (navigator.vibrate) navigator.vibrate(80);
+        addScanHistoryItem(decodedText);
+      }
+    }
 
-        function initiatePairing(targetPeerId) {
-            statusText.innerText = "Pairing...";
-            conn = peer.connect(targetPeerId);
+    // Option A: Manual Frame Detection
+    function triggerManualDetection() {
+      const videoElement = document.querySelector("#reader video");
+      if (!videoElement) {
+        alert("Please tap 'Enable Camera' first to start video stream.");
+        return;
+      }
 
-            conn.on('open', () => {
-                isPaired = true;
-                statusPill.classList.add("connected");
-                statusText.innerText = "Connected";
+      const canvas = document.createElement("canvas");
+      canvas.width = videoElement.videoWidth;
+      canvas.height = videoElement.videoHeight;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
 
-                conn.send({ type: 'DEVICE_INFO', name: getMobileDeviceInfo() });
+      const html5QrCode = new Html5Qrcode("reader");
+      
+      canvas.toBlob((blob) => {
+        const file = new File([blob], "snapshot.png", { type: "image/png" });
+        html5QrCode.scanFile(file, true)
+          .then(decodedText => {
+            onScanSuccess(decodedText);
+          })
+          .catch(err => {
+            alert("No QR code detected in current frame. Re-align and try again.");
+          });
+      });
+    }
 
-                document.getElementById("manual-box").style.display = "none";
-                if (navigator.vibrate) navigator.vibrate(200);
-            });
+    function initiatePairing(targetPeerId) {
+      statusText.innerText = "Pairing...";
+      conn = peer.connect(targetPeerId);
 
-            conn.on('data', (data) => {
-                if (typeof data === 'object' && data.type === 'DEVICE_INFO') {
-                    stepTitleContainer.innerHTML = `
-            <div style="margin-bottom: 0.2rem; font-size: 0.85rem; color: var(--success); font-weight: 600;">✅ Connected Receiver:</div>
+      conn.on('open', () => {
+        isPaired = true;
+        statusPill.classList.add("connected");
+        statusText.innerText = "Connected";
+
+        conn.send({ type: 'DEVICE_INFO', name: getMobileDeviceInfo() });
+
+        document.getElementById("manual-box").style.display = "none";
+        if (navigator.vibrate) navigator.vibrate(200);
+      });
+
+      conn.on('data', (data) => {
+        if (typeof data === 'object' && data.type === 'DEVICE_INFO') {
+          stepTitleContainer.innerHTML = `
+            <div style="font-size: 0.8rem; color: var(--success); font-weight: 600; margin-bottom: 0.2rem;">✅ CONNECTED RECEIVER</div>
             <div class="pc-device-badge">💻 ${escapeHtml(data.name)}</div>
-            <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem; margin-bottom: 0.75rem;">Point camera at target QRs to transmit payload</p>
+            <p class="pairing-sub" style="margin-top: 0.5rem;">Point camera at target QRs to transmit payload instantly.</p>
           `;
-                }
-            });
-
-            conn.on('close', () => {
-                isPaired = false;
-                statusPill.classList.remove("connected");
-                statusText.innerText = "Disconnected";
-                stepTitleContainer.innerHTML = `<h2 id="step-title" style="font-size: 0.95rem; margin-bottom: 0.75rem;">Pairing: Scan QR or Enter Code</h2>`;
-                document.getElementById("manual-box").style.display = "flex";
-            });
         }
+      });
 
-        function getMobileDeviceInfo() {
-            const ua = navigator.userAgent;
-            let device = "Mobile Device";
+      conn.on('close', () => {
+        isPaired = false;
+        statusPill.classList.remove("connected");
+        statusText.innerText = "Disconnected";
+        stepTitleContainer.innerHTML = `
+          <h2 id="step-title" class="pairing-title">Pairing: Scan QR or Enter Code</h2>
+          <p class="pairing-sub">Connect to receiver hub on desktop</p>
+        `;
+        document.getElementById("manual-box").style.display = "flex";
+      });
+    }
 
-            if (ua.includes("iPhone")) device = "iPhone";
-            else if (ua.includes("iPad")) device = "iPad";
-            else if (ua.includes("Android")) {
-                const match = ua.match(/Android\s+[\d\.]+;\s*([^;)]+)/);
-                device = match ? match[1] : "Android Device";
-            }
+    function getMobileDeviceInfo() {
+      const ua = navigator.userAgent;
+      let device = "Mobile Device";
+      
+      if (ua.includes("iPhone")) device = "iPhone";
+      else if (ua.includes("iPad")) device = "iPad";
+      else if (ua.includes("Android")) {
+        const match = ua.match(/Android\s+[\d\.]+;\s*([^;)]+)/);
+        device = match ? match[1] : "Android Device";
+      }
 
-            return device;
-        }
+      return device;
+    }
 
-        function addScanHistoryItem(text) {
-            if (scanHistory.children[0]?.innerText.includes("No scans sent")) {
-                scanHistory.innerHTML = "";
-            }
-            const item = document.createElement("div");
-            item.className = "scan-item";
-            const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            item.innerHTML = `<span>${escapeHtml(String(text))}</span><span style="color: var(--text-muted); font-size: 0.7rem;">${now}</span>`;
-            scanHistory.insertBefore(item, scanHistory.firstChild);
-        }
+    function addScanHistoryItem(text) {
+      if (scanHistory.children[0]?.innerText.includes("No scans sent")) {
+        scanHistory.innerHTML = "";
+      }
+      const item = document.createElement("div");
+      item.className = "scan-item";
+      const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      item.innerHTML = `
+        <span style="word-break: break-all; margin-right: 0.5rem;">${escapeHtml(String(text))}</span>
+        <span style="color: var(--text-muted); font-size: 0.7rem; white-space: nowrap;">${now}</span>
+      `;
+      scanHistory.insertBefore(item, scanHistory.firstChild);
+    }
 
-        function escapeHtml(text) {
-            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-        }
-    </script>
+    function escapeHtml(text) {
+      return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+  </script>
 </body>
-
 </html>
