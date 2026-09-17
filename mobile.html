@@ -548,12 +548,7 @@
         }
 
         async function onScanSuccess(decodedText) {
-            // Ignore scans detected within the 1-second setup delay
-            if (Date.now() - cameraStartTime < 1000) {
-                return;
-            }
-
-            // Stop camera stream immediately after valid detection
+            // Stop camera stream immediately after detection
             await closeCamera();
 
             if (!isPaired) {
